@@ -72,6 +72,7 @@ for filename in glob.glob1(original_folder, "*.*"):
 			size = size + (os.path.getsize(srcfile) / (1024*1024.0))
 			named = os.path.join(new_folder,folder)
 			try:
+				#Create folder
 				os.mkdir(named)
 				log(0,"Successfully created the directory %s " % named)
 
