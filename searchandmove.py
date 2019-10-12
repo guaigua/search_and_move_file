@@ -7,21 +7,27 @@ import sys
 import os
 import glob
 import shutil
-import time
 import logging
-from datetime import datetime, date, timedelta
+import textract
+import re
+
+
 
 # start editable vars 
 
 original_folder = "./serverfolder/source/"    	# folder to move files from
-new_folder = "./serverfolder/destination/"		# folder to move files to
-error_folder = "./serverfolder/unprocessed/"	# folder to move files with errors
+new_folder = "./serverfolder/destination/"      # folder to move files to
+error_folder = "./serverfolder/unprocessed/"    # folder to move files with errors
 logfile = "./serverfolder/logs/log.log"   		# log file to record what has happened
-count = 0                                       # count
+files_success = 0                               # count files
+files_with_errors = 0							# count files with errors
 size = 0.0                                      # size
+found = ''										# found is empty
 # end editable vars
 
 # start function definitions 
+
+#log
 
 def log(level,msg,tofile=True):
 	print (msg)
@@ -31,35 +37,50 @@ def log(level,msg,tofile=True):
 			logger.info(msg)
 		else:
 			logger.error(msg)
-			
+#end log			
 def end(code):
-	log(0,"End.")
+	log(0,"End...")	
 	log(0,"-------------------------")
-# end function definitions #logging.getLogger("cuarch")
 
-# start process #
+###
+def extractext(file):	
+	try:
+		text = str(textract.process(file))
+		found = re.search('Fecha:(.+?) Hora:', text).group(1)
+		print (found)
+	except AttributeError:
+		found = ''
+	return found
+# end function definitions 
 
+
+# start process with log #
 logger = logging.getLogger("cuarch")
 hdlr = logging.FileHandler(logfile)
 hdlr.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(hdlr) 
 logger.setLevel(logging.INFO)
-
 log(0,"Initialising...")
 
 for filename in glob.glob1(original_folder, "*.*"):
-    srcfile = os.path.join(original_folder, filename)
-    #create carpeta con nuevo destino
-    destfile = os.path.join(new_folder, filename)
-    #Condicional
-    if os.stat(srcfile):   
-    	if not os.path.isfile(destfile):
-            print ("Test")
-    		size = size + (os.path.getsize(srcfile) / (1024*1024.0))
+	destfile = os.path.join(new_folder, filename)
+	srcfile = os.path.join(original_folder, filename)
+	errorfile = os.path.join(error_folder, filename)
+	if os.stat(srcfile):
+		if not os.path.isfile(destfile):
+			extractext(srcfile)
+			print (extractext(found))
+			if found:				
+				size = size + (os.path.getsize(srcfile) / (1024*1024.0))
+				shutil.move(srcfile, destfile)
+				log(0,"Archived '" + filename + "'.")
+				files_success = files_success + 1
+			else:
+				shutil.move(srcfile, errorfile)
+				log(1,"Archived '" + filename + "'.")
+				files_with_errors = files_with_errors + 1
 
-	        shutil.move(srcfile, destfile)        
-	        log(0,"Archived '" + filename + "'.")
-	        count = count + 1
-
-log(0,"Archived " + str(count) + " files, totalling " + str(round(size,2)) + "MB.")
+log(0,"Successfully achieved" + str(files_success) + " files, totalling " + str(round(size,2)) + "MB. files with errors" + str(files_with_errors))
 end(0)
+
+
