@@ -61,7 +61,7 @@ hdlr.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(hdlr) 
 logger.setLevel(logging.INFO)
 log(0,"Initialising Cron...")
-
+print (glob.glob1(original_folder, "*.*"))
 for filename in glob.glob1(original_folder, "*.*"):
 	folder=os.path.splitext(filename)[0]
 	srcfile = os.path.join(original_folder, filename)	
