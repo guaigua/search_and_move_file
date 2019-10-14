@@ -1,6 +1,11 @@
 #!/usr/bin/env python
+
 """
 Info Program Search and move for cron
+
+The files to transform must be in the folder:
+./serverfolder/source/
+
 """
 #imports
 
