@@ -4,8 +4,9 @@
 Info Program Search and move for file 
 Example:
 
-python3 searchandmove_file.py  XXXXXX.pdf 
+python3 searchandmove_file.py  XXXXXX.pdf  id
 argv[1] -------------------------------^
+argv[2] -----------------------------------^
 """
 #imports
 
@@ -17,6 +18,16 @@ import logging
 import textract
 import re
 
+import pymongo
+import urllib.parse
+from pymongo import MongoClient
+from pprint import pprint
+
+# bd
+username = urllib.parse.quote_plus('chew')
+password = urllib.parse.quote_plus('zaq12Wsx')
+client = MongoClient('mongodb://%s:%s@127.0.0.1' % (username, password))
+
 # start editable vars 
 
 original_folder = "./serverfolder/source/"    	# folder to move files from
@@ -27,7 +38,11 @@ files_success = 0                               # count files
 files_with_errors = 0							# count files with errors
 size = 0.0                                      # size
 found = ''										# found is empty
-pattern_to_search ='Fecha:(.+?) Hora:'          # pattern to search
+pattern_to_search ='000 (.+?), Xth Floor'       # pattern to search
+
+#pattern_to_search = email
+email = "mailuser@gmail.com"
+
 # end editable vars
 
 # start function definitions 
@@ -52,7 +67,7 @@ def extractext(file):
 	try:
 		text = str(textract.process(file))
 		found = re.search(pattern_to_search, text).group(1)
-		print (found)
+		print ('email',found)
 	except AttributeError:
 		found = ''
 	return found
@@ -72,10 +87,20 @@ folder=os.path.splitext(filename)[0]
 srcfile = os.path.join(original_folder, filename)	
 errorfile = os.path.join(error_folder, filename)
 if os.stat(srcfile):		
-    found = extractext(srcfile)			
+    found = extractext(srcfile)	
     if found:	
         size = size + (os.path.getsize(srcfile) / (1024*1024.0))
-        named = os.path.join(new_folder,folder)
+        #named = os.path.join(new_folder,folder)
+
+        #Connect to db
+        db = client.iportalDevDB19
+        #Connect to collection
+        collection = db.users
+        # Make a query to list all the documents
+        for doc in collection.find():
+            if doc['email'] == email:
+                named = str(doc['_id'])
+
         try:
             #Create folder
             os.mkdir(named)
