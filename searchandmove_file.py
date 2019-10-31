@@ -3,8 +3,7 @@
 """
 Info Program Search and move for file 
 Example:
-python3 searchandmove_file.py serverfolder/source/PDF\ all.pdf dataofcompany dataoffundID dataofcompID dataofcatID dataofapproved 
-
+python3 searchandmove_file.py serverfolder/source/PDF\ all.pdf dataofcompany dataoffundID dataofcompID dataofcatID dataofapproved
 python3 searchandmove_file.py fileName.pdf  company fundID compID catID approved 
 argv[1] -------------------------------^
 argv[2] ---------------------------------------^
