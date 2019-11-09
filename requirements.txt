@@ -1,1 +1,2 @@
-textract
+textract 
+PyPDF2

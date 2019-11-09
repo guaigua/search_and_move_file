@@ -22,12 +22,13 @@ import shutil
 import logging
 import textract
 import re
-
+import PyPDF2
 import pymongo
 import urllib.parse
-from pymongo import MongoClient
-from pprint import pprint
+import json
 import os.path as path
+from pymongo import MongoClient
+from PyPDF2 import PdfFileWriter, PdfFileReader
 
 # bd
 username = urllib.parse.quote_plus('chew')
@@ -35,16 +36,17 @@ password = urllib.parse.quote_plus('zaq12Wsx')
 client = MongoClient('mongodb://%s:%s@127.0.0.1' % (username, password))
 
 # start editable vars 
-
 original_folder = "./serverfolder/source/"    	# folder to move files from
+pdf_folder = "./"                               # pdf files from
 new_folder = "./serverfolder/destination/"      # folder to move files to
+ok_folder = "./serverfolder/processed/"    # folder to move files is ok
 error_folder = "./serverfolder/unprocessed/"    # folder to move files with errors
 logfile = "./serverfolder/logs/log.log"   		# log file to record what has happened
 files_success = 0                               # count files
 files_with_errors = 0							# count files with errors
 size = 0.0                                      # size
 pattern_to_search ='000 (.+?) Avenue'           # pattern to search is invID
-
+dst = None
 invID = ''										# invID is empty
 filename = os.path.basename(sys.argv[1])
 company = os.path.basename(sys.argv[2])
@@ -52,19 +54,13 @@ fundID = os.path.basename(sys.argv[3])
 compID = os.path.basename(sys.argv[4])
 catID = os.path.basename(sys.argv[5])
 approved = os.path.basename(sys.argv[6])
-
-
-
-
 # end editable vars
 
 # start function definitions 
 
 #log
-
 def log(level,msg,tofile=True):
-	print (msg)
-	
+	print (msg)	
 	if tofile == True:
 		if level == 0:
 			logger.info(msg)
@@ -83,29 +79,54 @@ def extractext(file):
 	except AttributeError:
 		invID = ''
 	return invID
+
+def safe_copy(file_path, out_dir, dst = None):
+    """Safely copy a file to the specified directory. If a file with the same name already 
+    exists, the copied file name is altered to preserve both.
+
+    :param str file_path: Path to the file to copy.
+    :param str out_dir: Directory to copy the file into.
+    :param str dst: New name for the copied file. If None, use the name of the original
+        file.
+    """  
+    name = dst or os.path.basename(file_path)  
+    if not os.path.exists(out_dir):               
+        shutil.move(file_path, out_dir)
+        
+    else:                       
+        base, extension = os.path.splitext(name)     
+        f = 1
+        while os.path.exists(os.path.join(out_dir, '{}_{}{}'.format(base, f, extension))):
+            f += 1
+        shutil.move(file_path, os.path.join(out_dir, '{}_{}{}'.format(base, f, extension)))                    
+        log(0,"File Exists '" + filename + "'.")
+        f = 0     
+
 # end function definitions 
 
-
 # start process #
+
 logger = logging.getLogger("cuarch")
 hdlr = logging.FileHandler(logfile)
 hdlr.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
 logger.addHandler(hdlr) 
 logger.setLevel(logging.INFO)
-log(0,"Initialising Cron...")
+log(0,"Initialising...")
 folder=os.path.splitext(filename)[0]
+
 srcfile = os.path.join(original_folder, filename)
+okfile = os.path.join(ok_folder, filename)
 errorfile = os.path.join(error_folder, filename)
+
 try:
     filepath = os.stat(srcfile)
-     
-    if filepath:		
-        invID = extractext(srcfile)    
-        if invID:
-            #size = size + (os.path.getsize(srcfile) / (1024*1024.0))
-            #print (os.path.join(new_folder,folder))
+    with open(srcfile, "rb") as f:
+        pdf = PdfFileReader(f)
+        bookmarks = pdf.getOutlines()
+        for b in bookmarks:
+            invID = b['/Title']
+            i = pdf.getDestinationPageNumber(b)
             named = os.path.join(new_folder,invID)
-
             if not path.isdir(named):
                 #Folder does not exist
                 try:
@@ -120,11 +141,17 @@ try:
                 #Folder exist
                 log(0,"Folder exist %s " % named)
             
-            
-            destfile = os.path.join(named, filename)
-            destfile			
-            if not os.path.exists(destfile):
-                shutil.move(srcfile, destfile)
+            #Split pdf
+            output = PdfFileWriter()
+            output.addPage(pdf.getPage(i))  
+            with open(filename, "wb") as outputStream:
+                output.write(outputStream)
+              
+            if invID:
+                pdffile = os.path.join(pdf_folder, filename)
+                destfile = os.path.join(named, filename)     
+                renamefile = os.path.join(named, filename)      
+                safe_copy(pdffile,named)  
                 log(0,"Archived '" + filename + "'.")
                 files_success = files_success + 1
                 approved = True
@@ -143,17 +170,14 @@ try:
                         "approved": approved
                         }   
                 rec_files = collection.insert_one(file)
-            
             else:
                 shutil.move(srcfile, errorfile)
-                log(1,"File Exists '" + filename + "'.")
-                files_with_errors = files_with_errors + 1
-        else:
-            shutil.move(srcfile, errorfile)
-            log(1,"Without invID'" + filename + "'.")
-            files_with_errors = files_with_errors + 1
+                log(1,"Without invID'" + filename + "'.")
+                files_with_errors = files_with_errors + 1     
+    safe_copy(srcfile,ok_folder)    
+
 except:
-    log(1,"file does not exist '" + filename + "'.")
+    log(1,"This file could not be processed.'" + filename + "'.")
 
 log(0,"Successfully achieved " + str(files_success) + " files, totalling " + str(round(size,2)) + "MB. files with errors " + str(files_with_errors))
 end(0)
