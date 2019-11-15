@@ -5,6 +5,7 @@ Python script (file). Its funtion to review file (arg), review pdf files, look f
 ## Dependencies
 
 pip3 install textract
+pip3 install PyPDF2
 
 > Also, check the requirements.txt file for additional requirements.
 
