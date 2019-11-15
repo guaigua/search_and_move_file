@@ -145,12 +145,19 @@ except:
 
 with open(srcfile, "rb") as f:
     pdf = PdfFileReader(f)
-    bookmarks = pdf.getOutlines()
+    #Try bookmarks without child
+    try:
+        bookmarks = pdf.getOutlines()
+    except:
+        safe_copy(srcfile, error_folder)
+        upload=False
+        errormsg= "this file contains bookmarks with child"
+        error_log(filename,upload,errormsg)
     #Read Bookmarks
     if bookmarks:
         for b in bookmarks:
             invID = b['/Title']
-            if len(invID) > 20 :
+            if len(invID) < 21 and re.match('\w',invID):
                 i = pdf.getDestinationPageNumber(b)
                 named = os.path.join(new_folder,invID)
                 if not path.isdir(named):
@@ -168,7 +175,7 @@ with open(srcfile, "rb") as f:
             else:
                 safe_copy(srcfile, error_folder)
                 upload=False
-                errormsg= "bookmark is under 20"
+                errormsg= "bookmark is higher 21 or it's not alphanumeric "
                 error_log(filename,upload,errormsg)
             #Split pdf
             output = PdfFileWriter()
@@ -180,7 +187,6 @@ with open(srcfile, "rb") as f:
                 destfile = os.path.join(named, filename)
                 renamefile = os.path.join(named, filename)
                 safe_copy(pdffile,named)
-                approved = True
                 #Connect to db
                 db = client.iportalDevDB19
                 #Connect to collection
@@ -211,5 +217,8 @@ with open(srcfile, "rb") as f:
         error_log(filename,upload,errormsg)
 if upload==True:
     safe_copy(srcfile,ok_folder)
+    upload=True
+    errormsg= "None"
+    error_log(filename,upload,errormsg)
 else:
     safe_copy(srcfile,error_folder)
