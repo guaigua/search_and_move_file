@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 
 """
 Info Program Search and move for file
@@ -37,19 +37,6 @@ client = MongoClient(os.environ['dev_dbConnection'])
 original_folder = "./serverfolder/source/"    	# folder to move files from
 pdf_folder = "./"                               # pdf files from
 new_folder = "./serverfolder/destination/"      # folder to move files to
-ok_folder = "./serverfolder/processed/"         # folder to move files is ok
-error_folder = "./serverfolder/unprocessed/"    # folder to move files with errors
-log_folder = "./serverfolder/logs/"   		# log file to record what has happened
-logfile = "./serverfolder/logs/log.log"   		# log file to record what has happened
-
-if not path.isdir(log_folder):
-    #Folder does not exist
-    try:
-        #Create folder
-        os.mkdir(log_folder)
-
-    except OSError:
-        print ('Error Create Folder')
 
 if not path.isdir(original_folder):
     #Folder does not exist
@@ -59,7 +46,7 @@ if not path.isdir(original_folder):
 
     except OSError:
         print ('Error Create Folder')
-        
+
 if not path.isdir(new_folder):
     #Folder does not exist
     try:
@@ -68,24 +55,7 @@ if not path.isdir(new_folder):
 
     except OSError:
         print ('Error Create Folder')
-        
-if not path.isdir(ok_folder):
-    #Folder does not exist
-    try:
-        #Create folder
-        os.mkdir(ok_folder)
 
-    except OSError:
-        print ('Error Create Folder')
-
-if not path.isdir(error_folder):
-    #Folder does not exist
-    try:
-        #Create folder
-        os.mkdir(error_folder)
-
-    except OSError:
-        print ('Error Create Folder')
 
 files_success = 0                               # count files
 files_with_errors = 0							# count files with errors
@@ -95,6 +65,7 @@ dst = None
 invID = ''										# invID is empty
 date = datetime.today()                         # date
 upload = False                                  # Upload set False
+error = 0
 filename = os.path.basename(sys.argv[1])
 docType = os.path.basename(sys.argv[2])
 compID = os.path.basename(sys.argv[3])
@@ -105,19 +76,6 @@ pending = os.path.basename(sys.argv[7])
 # end editable vars
 
 # start function definitions
-
-#log
-def log(level,msg,tofile=True):
-	print (msg)
-	if tofile == True:
-		if level == 0:
-			logger.info(msg)
-		else:
-			logger.error(msg)
-
-def end(code):
-	log(0,"End...")
-	log(0,"----------------------------------------------------------------------------------")
 
 def extractext(file):
 	try:
@@ -145,17 +103,14 @@ def safe_copy(file_path, out_dir, dst = None):
         while os.path.exists(os.path.join(out_dir, '{}_{}{}'.format(base, f, extension))):
             f += 1
         shutil.move(file_path, os.path.join(out_dir, '{}_{}{}'.format(base, f, extension)))
-        log(0,"File Exists '"+ " " + filename + "'.")
         f = 0
 
 def error_log(filename, upload, errormsg):
     #Write log
-    log(1, errormsg + " " +   filename + "'.")
     #Connect to db
     db = client.iportalDevDB19
     #Connect to collection
     collection = db.uploadlog
-    print (date)
     error = {
                         "filename": filename,
                         "upload": upload,
@@ -163,22 +118,14 @@ def error_log(filename, upload, errormsg):
                         "date": date
     }
     collection.insert_one(error)
-    sys.exit()
-# end function definitions
+    # end function definitions
 
 # start process #
 
-logger = logging.getLogger("cuarch")
-hdlr = logging.FileHandler(logfile)
-hdlr.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s: %(message)s'))
-logger.addHandler(hdlr)
-logger.setLevel(logging.INFO)
-log(0,"Initialising...")
 folder=os.path.splitext(filename)[0]
 # joins
 srcfile = os.path.join(original_folder, filename)
-okfile = os.path.join(ok_folder, filename)
-errorfile = os.path.join(error_folder, filename)
+
 # Try file existe?
 try:
     filepath = os.stat(srcfile)
@@ -186,6 +133,7 @@ except:
     upload=False
     errormsg= "file does not exist"
     error_log(filename,upload,errormsg)
+    sys.exit()
 
 with open(srcfile, "rb") as f:
     pdf = PdfFileReader(f)
@@ -193,46 +141,56 @@ with open(srcfile, "rb") as f:
     try:
         bookmarks = pdf.getOutlines()
     except:
-        safe_copy(srcfile, error_folder)
         upload=False
         errormsg= "this file contains bookmarks with child"
         error_log(filename,upload,errormsg)
+        sys.exit()
     #Read Bookmarks
     if bookmarks:
         for b in bookmarks:
             invID = b['/Title']
             if len(invID) < 22 and re.match('\w',invID):
                 i = pdf.getDestinationPageNumber(b)
-                named = os.path.join(new_folder,invID)
-                if not path.isdir(named):
-                    #Folder does not exist
-                    try:
-                        #Create folder
-                        os.mkdir(named)
-                        log(0,"Successfully created the directory %s " % named)
+                #Search InvID in database
+                #Connect to db
+                db = client.iportalDevDB19
+                #Connect to collection
+                collection = db.investors
+                rinvID = ''
+                for x in collection.find({ "invID":  invID }):
+                    rinvID= x['_id']
+                if rinvID:
+                    named = os.path.join(new_folder,invID)
+                    if not path.isdir(named):
+                        #Folder does not exist
+                        try:
+                            #Create folder
+                            os.mkdir(named)
 
-                    except OSError:
-                        log(1,"Creation of the directory %s failed" % named)
+                        except OSError:
+                            error = error + 1
+                            upload=False
+                            errormsg= "Creation of the directory %s failed" % named
+                            error_log(filename,upload,errormsg)
+                    else:
+                        #Folder exist
+                        print ("Folder exist %s " % named)
                 else:
-                    #Folder exist
-                    log(0,"Folder exist %s " % named)
+                    error=error + 1
             else:
-                safe_copy(srcfile, error_folder)
-                upload=False
-                errormsg= "bookmark is higher 21 or it's not alphanumeric "
-                error_log(filename,upload,errormsg)
+                error=error + 1
+                errormsg= "bookmark is higher 21 or it's not alphanumeric"
             #Split pdf
             output = PdfFileWriter()
             output.addPage(pdf.getPage(i))
             with open(filename, "wb") as outputStream:
                 output.write(outputStream)
-            if invID:
+
+            if rinvID:
                 pdffile = os.path.join(pdf_folder, filename)
                 destfile = os.path.join(named, filename)
                 renamefile = os.path.join(named, filename)
                 safe_copy(pdffile,named)
-                #Connect to db
-                db = client.iportalDevDB19
                 #Connect to collection
                 collection = db.files
                 file = {
@@ -241,28 +199,24 @@ with open(srcfile, "rb") as f:
                         "compID": compID,
                         "fundID": fundID,
                         "catID": catID,
-                        "invID": invID,
+                        "invID": rinvID,
                         "approved": approved,
                         "peding": pending,
                         "date": date
                         }
                 rec_files = collection.insert_one(file)
-                upload  = True
-                log(0,"Archived '" + filename + "'.")
-            else:
-                safe_copy(srcfile,error_folder)
-                upload=False
-                errormsg= "invID do not exist"
+                errormsg= "None"
+                upload=True
                 error_log(filename,upload,errormsg)
+            else:
+                error = error + 1
+                upload=False
+                errormsg= "invID = "+ invID +" do not exist in database"
+                error_log(filename,upload,errormsg)
+        if error > 0:
+            sys.exit()
     else:
-        safe_copy(srcfile, error_folder)
         upload=False
         errormsg= "Bookmarks do not exist"
         error_log(filename,upload,errormsg)
-if upload==True:
-    safe_copy(srcfile,ok_folder)
-    upload=True
-    errormsg= "None"
-    error_log(filename,upload,errormsg)
-else:
-    safe_copy(srcfile,error_folder)
+        sys.exit()
