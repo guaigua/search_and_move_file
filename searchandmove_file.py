@@ -39,7 +39,54 @@ pdf_folder = "./"                               # pdf files from
 new_folder = "./serverfolder/destination/"      # folder to move files to
 ok_folder = "./serverfolder/processed/"         # folder to move files is ok
 error_folder = "./serverfolder/unprocessed/"    # folder to move files with errors
+log_folder = "./serverfolder/logs/"   		# log file to record what has happened
 logfile = "./serverfolder/logs/log.log"   		# log file to record what has happened
+
+if not path.isdir(log_folder):
+    #Folder does not exist
+    try:
+        #Create folder
+        os.mkdir(log_folder)
+
+    except OSError:
+        print ('Error Create Folder')
+
+if not path.isdir(original_folder):
+    #Folder does not exist
+    try:
+        #Create folder
+        os.mkdir(original_folder)
+
+    except OSError:
+        print ('Error Create Folder')
+        
+if not path.isdir(new_folder):
+    #Folder does not exist
+    try:
+        #Create folder
+        os.mkdir(new_folder)
+
+    except OSError:
+        print ('Error Create Folder')
+        
+if not path.isdir(ok_folder):
+    #Folder does not exist
+    try:
+        #Create folder
+        os.mkdir(ok_folder)
+
+    except OSError:
+        print ('Error Create Folder')
+
+if not path.isdir(error_folder):
+    #Folder does not exist
+    try:
+        #Create folder
+        os.mkdir(error_folder)
+
+    except OSError:
+        print ('Error Create Folder')
+
 files_success = 0                               # count files
 files_with_errors = 0							# count files with errors
 size = 0.0                                      # size
