@@ -32,10 +32,7 @@ from PyPDF2 import PdfFileWriter, PdfFileReader
 from datetime import datetime
 
 # bd
-username = urllib.parse.quote_plus('chew')
-password = urllib.parse.quote_plus('zaq12Wsx')
-client = MongoClient('mongodb://%s:%s@127.0.0.1' % (username, password))
-
+client = MongoClient(os.environ['dev_dbConnection'])
 # start editable vars
 original_folder = "./serverfolder/source/"    	# folder to move files from
 pdf_folder = "./"                               # pdf files from
@@ -157,7 +154,7 @@ with open(srcfile, "rb") as f:
     if bookmarks:
         for b in bookmarks:
             invID = b['/Title']
-            if len(invID) < 21 and re.match('\w',invID):
+            if len(invID) < 22 and re.match('\w',invID):
                 i = pdf.getDestinationPageNumber(b)
                 named = os.path.join(new_folder,invID)
                 if not path.isdir(named):
