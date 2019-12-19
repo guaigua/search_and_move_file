@@ -161,9 +161,16 @@ with open(srcfile, "rb") as f:
                 db = client.iportalDevDB19
                 #Connect to collection
                 collection = db.investors
+                collection2 = db.fundinvestors
                 rinvID = ''
-                for x in collection.find({ "invID":  invID }):
-                    rinvID=  str(x['_id'])
+                fundID = ''
+                for y in collection2.find({ "invID":  invID }):
+                    fundID=  str(y['fundID'])
+                    print (fundID)
+                if fundID:
+                    for x in collection.find({ "invID":  invID }):
+                        rinvID=  str(x['_id'])
+ 
                 if rinvID:
                     named = os.path.join(new_folder,rinvID)
                     if not path.isdir(named):
