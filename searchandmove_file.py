@@ -3,7 +3,7 @@
 """
 Info Program Search and move for file
 Example:
-python3 searchandmove_file.py serverfolder/source/PDF\ all.pdf dataofdocType dataofcompID dataoffundID dataofcatID dataofapproved dataofpending
+python3 searchandmove_file.py PDF\ all.pdf dataofdocType dataofcompID dataoffundID dataofcatID dataofapproved dataofpending
 python3 searchandmove_file.py fileName.pdf docType compID fundID catID approved pending
 argv[1] -------------------------------^
 argv[2] ---------------------------------------^
@@ -158,9 +158,9 @@ with open(srcfile, "rb") as f:
                 collection = db.investors
                 rinvID = ''
                 for x in collection.find({ "invID":  invID }):
-                    rinvID= x['_id']
+                    rinvID=  str(x['_id'])
                 if rinvID:
-                    named = os.path.join(new_folder,invID)
+                    named = os.path.join(new_folder,rinvID)
                     if not path.isdir(named):
                         #Folder does not exist
                         try:
