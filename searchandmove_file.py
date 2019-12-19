@@ -94,16 +94,17 @@ def safe_copy(file_path, out_dir, dst = None):
     :param str dst: New name for the copied file. If None, use the name of the original
         file.
     """
-    name = dst or os.path.basename(file_path)
-    if not os.path.exists(out_dir):
-        shutil.move(file_path, out_dir)
-    else:
-        base, extension = os.path.splitext(name)
-        f = 0
-        while os.path.exists(os.path.join(out_dir, '{}_{}{}'.format(base, f, extension))):
-            f += 1
-        shutil.move(file_path, os.path.join(out_dir, '{}_{}{}'.format(base, f, extension)))
-        f = 0
+    shutil.copy(file_path, out_dir)
+    #name = dst or os.path.basename(file_path)
+    #if not os.path.exists(out_dir):
+    #    shutil.move(file_path, out_dir)
+    #else:
+    #    base, extension = os.path.splitext(name)
+    #    f = 0
+    #    while os.path.exists(os.path.join(out_dir, '{}_{}{}'.format(base, f, extension))):
+    #        f += 1
+    #    shutil.move(file_path, os.path.join(out_dir, '{}_{}{}'.format(base, f, extension)))
+    #    f = 0
 
 def error_log(filename, upload, errormsg):
     #Write log
